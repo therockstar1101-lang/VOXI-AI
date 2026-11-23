@@ -3,6 +3,9 @@ package com.voxi.assistant
 import android.Manifest
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.Context
+import android.media.AudioManager
+import android.hardware.camera2.CameraManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -420,6 +423,32 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             text.contains("whatsapp") -> openApp("com.whatsapp", "WhatsApp")
             text.contains("instagram") -> openApp("com.instagram.android", "Instagram")
             text.contains("chrome") -> openApp("com.android.chrome", "Chrome")
+            text.contains("flashlight") || text.contains("torch") -> {
+                val turnOn = text.contains("on") || text.contains("enable")
+                setFlashlight(turnOn)
+            }
+            text.contains("volume up") || text.contains("increase volume") || text.contains("volume badhao") -> {
+                val audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                speak("Volume increased")
+            }
+            text.contains("volume down") || text.contains("decrease volume") || text.contains("volume kam") -> {
+                val audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                speak("Volume decreased")
+            }
+            text.contains("silent mode") || text.contains("silent") || text.contains("mute phone") -> {
+                setRingerMode(AudioManager.RINGER_MODE_SILENT)
+            }
+            text.contains("normal mode") || text.contains("ring mode") || text.contains("sound on") -> {
+                setRingerMode(AudioManager.RINGER_MODE_NORMAL)
+            }
+            text.contains("screenshot") || text.contains("screen shot") -> {
+                speak("For a screenshot, press your phone's power and volume down buttons together")
+            }
+            text.contains("screen recording") || text.contains("record screen") -> {
+                speak("Swipe down twice from the top of your screen, tap Screen Record, then confirm Start")
+            }
             text.contains("settings") -> {
                 speak("Opening settings")
                 startActivity(Intent(android.provider.Settings.ACTION_SETTINGS))
@@ -446,6 +475,38 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 })
             }
             else -> speak("Sorry, I don't know that command yet")
+        }
+    }
+
+    private fun setRingerMode(mode: Int) {
+        try {
+            val audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audio.ringerMode = mode
+            speak(if (mode == AudioManager.RINGER_MODE_SILENT) "Silent mode enabled" else "Normal mode enabled")
+        } catch (_: SecurityException) {
+            speak("Please allow Do Not Disturb access in settings")
+            try { startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) } catch (_: Exception) { }
+        }
+    }
+
+    private fun setFlashlight(enabled: Boolean) {
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), 102)
+            speak("Please allow camera permission, then repeat the flashlight command")
+            return
+        }
+        try {
+            val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
+                cameraManager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            }
+            if (cameraId == null) speak("Flashlight is not available on this phone")
+            else {
+                cameraManager.setTorchMode(cameraId, enabled)
+                speak(if (enabled) "Flashlight turned on" else "Flashlight turned off")
+            }
+        } catch (_: Exception) {
+            speak("Unable to control flashlight. Check camera permission")
         }
     }
 
@@ -522,7 +583,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val pulseRadius = base * (1.12f + pulse * 0.13f)
 
             paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 1.5f * resources.displayMetrics.density
+            paint.strokeWidth = dp(1.5).toFloat()
             paint.color = Color.argb(if (listening) 110 else 55, 90, 190, 255)
             canvas.drawCircle(cx, cy, pulseRadius, paint)
             paint.color = Color.argb(if (listening) 90 else 35, 180, 100, 255)
