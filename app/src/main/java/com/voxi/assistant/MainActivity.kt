@@ -522,7 +522,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val pulseRadius = base * (1.12f + pulse * 0.13f)
 
             paint.style = Paint.Style.STROKE
-            paint.strokeWidth = dp(1.5).toFloat()
+            paint.strokeWidth = 1.5f * resources.displayMetrics.density
             paint.color = Color.argb(if (listening) 110 else 55, 90, 190, 255)
             canvas.drawCircle(cx, cy, pulseRadius, paint)
             paint.color = Color.argb(if (listening) 90 else 35, 180, 100, 255)
