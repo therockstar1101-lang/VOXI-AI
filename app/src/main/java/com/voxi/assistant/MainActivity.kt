@@ -42,9 +42,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         applyTheme()
         setupSpeech()
 
+        val savedAge = prefs.getInt("age", 0)
         if (!prefs.getBoolean("profile_created", false)) {
             showProfile(false)
-        } else if (prefs.getInt("age", 0) < 15) {
+        } else if (savedAge !in 15..40) {
+            // Re-check old or invalid saved profiles before allowing entry.
             showBlocked()
         } else {
             showHome()
@@ -215,15 +217,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     name.error = "Enter your name"
                 }
 
-                enteredAge == null || enteredAge !in 1..120 -> {
-                    age.error = "Enter a valid age"
-                }
-
-                enteredAge < 15 -> {
-                    prefs.edit()
-                        .putInt("age", enteredAge)
-                        .putBoolean("profile_created", true)
-                        .apply()
+                enteredAge == null || enteredAge !in 15..40 -> {
+                    // Never save an age outside the permitted 15–40 range.
                     showBlocked()
                 }
 
@@ -254,7 +249,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         addText(
             page,
-            "Only users aged 15 and above can enter VOXI.",
+            "VOXI is only for users aged 15 to 40.",
             12f, muted, false, true
         )
     }
@@ -272,9 +267,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         addText(
             page,
-            "Sorry! VOXI is only for users aged 15+.",
+            "Sorry! VOXI is only for users aged 15 to 40.",
             17f, fg, true, true
         )
+
+        addSpace(page, 25)
+
+        addButton(page, "TRY AGAIN") {
+            // Return to profile entry without saving the rejected age.
+            showProfile(false)
+        }
     }
 
     // HOME DASHBOARD
